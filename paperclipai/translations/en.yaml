@@ -1,0 +1,80 @@
+configuration:
+  better_auth_secret:
+    name: Auth secret (required)
+    description: >-
+      Signing secret for authentication. Generate once with `openssl rand -hex 32`
+      and keep it stable. The server refuses to start without it.
+  public_url:
+    name: Public URL
+    description: >-
+      Public URL of the web UI, e.g. http://homeassistant.local:3100
+      (sets PAPERCLIP_PUBLIC_URL).
+  allowed_hostnames:
+    name: Allowed hostnames
+    description: >-
+      Hostnames/IPs allowed to reach the UI. homeassistant.local, localhost and the
+      container LAN IP are auto-seeded on boot; add any extra hosts here. Adding a new
+      host requires an add-on restart.
+  anthropic_base_url:
+    name: Anthropic base URL
+    description: >-
+      Override the Anthropic API base URL — set to a LiteLLM/compatible endpoint for
+      local models. Leave empty to use the real Anthropic API.
+  anthropic_auth_token:
+    name: Anthropic auth token
+    description: Token for the custom endpoint (e.g. the LiteLLM master key).
+  anthropic_api_key:
+    name: Anthropic API key
+    description: >-
+      Real Anthropic API key. Leave empty when using a custom endpoint to avoid
+      falling back to Anthropic.
+  anthropic_model:
+    name: Default model
+    description: Model name as known to your endpoint (ANTHROPIC_MODEL).
+  anthropic_small_fast_model:
+    name: Small/fast model
+    description: Override for the small/fast model tier (ANTHROPIC_SMALL_FAST_MODEL).
+  anthropic_default_haiku_model:
+    name: Haiku-tier model
+    description: Override for the Haiku model tier.
+  anthropic_default_sonnet_model:
+    name: Sonnet-tier model
+    description: Override for the Sonnet model tier.
+  anthropic_default_opus_model:
+    name: Opus-tier model
+    description: Override for the Opus model tier.
+  claude_code_subagent_model:
+    name: Claude Code subagent model
+    description: Model used by Claude Code subagents (CLAUDE_CODE_SUBAGENT_MODEL).
+  claude_code_effort:
+    name: Claude Code effort
+    description: Reasoning effort, e.g. "high" (CLAUDE_CODE_EFFORT). Advanced.
+  claude_code_experimental_agent_teams:
+    name: Experimental agent teams
+    description: Enable experimental agent teams, e.g. "1" (advanced).
+  claudecode:
+    name: CLAUDECODE flag
+    description: Sets the CLAUDECODE env var, e.g. "1" (advanced).
+  disable_prompt_caching:
+    name: Disable prompt caching
+    description: Set to "1" to disable prompt caching (advanced).
+  claude_code_disable_thinking:
+    name: Disable thinking
+    description: Set to "1" to disable Claude Code thinking (advanced).
+  claude_code_disable_adaptive_thinking:
+    name: Disable adaptive thinking
+    description: Set to "1" to disable Claude Code adaptive thinking (advanced).
+  claude_code_use_bedrock:
+    name: Use Bedrock
+    description: Set to "1" to route Claude Code through AWS Bedrock (advanced).
+  claude_code_use_vertex:
+    name: Use Vertex
+    description: Set to "1" to route Claude Code through Google Vertex (advanced).
+  openai_api_key:
+    name: OpenAI API key
+    description: OpenAI API key for the Codex CLI, if used.
+  opencode_allow_all_models:
+    name: OpenCode — allow all models
+    description: Allow OpenCode to use any model (OPENCODE_ALLOW_ALL_MODELS).
+network:
+  3100/tcp: PaperclipAI web UI

@@ -1,0 +1,13 @@
+# Shell scripts and the xdg-open shim run inside a Linux container — they MUST
+# keep LF line endings even though this repo is developed on Windows. A CRLF in
+# a shebang line (`#!/usr/bin/env bash\r`) makes the container fail with a
+# confusing "no such file or directory" on the interpreter.
+*.sh        text eol=lf
+run.sh      text eol=lf
+xdg-open    text eol=lf
+Dockerfile  text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+
+# Treat branding assets as binary.
+*.png binary
