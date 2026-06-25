@@ -49,7 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       @anthropic-ai/claude-code@latest @openai/codex@latest \
       opencode-ai @google/gemini-cli@latest \
  && mkdir -p /paperclip
-COPY --from=build /app /app
+COPY --from=build --chown=node:node /app /app
 
 # Materialise the pinned pnpm (from upstream package.json "packageManager") into a
 # shared corepack cache so the runtime `gosu node pnpm paperclipai …` calls in run.sh

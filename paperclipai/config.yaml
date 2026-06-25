@@ -1,5 +1,5 @@
 name: "PaperclipAI"
-version: "0.1.0"
+version: "0.1.1"
 slug: "paperclipai"
 description: "Self-hosted AI project-management board for AI coding agents (builds from source)"
 url: "https://github.com/BartBourgeois/HA-PaperclipAI"
