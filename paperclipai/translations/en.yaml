@@ -43,6 +43,12 @@ configuration:
   anthropic_default_opus_model:
     name: Opus-tier model
     description: Override for the Opus model tier.
+  enforce_env_model:
+    name: Enforce env model (auto-heal)
+    description: >-
+      Continuously clears any per-agent hardcoded model so every Claude agent inherits
+      anthropic_model. Prevents hired agents from bypassing your custom LLM routing.
+      Disable only if you intentionally set different models per agent.
   claude_code_subagent_model:
     name: Claude Code subagent model
     description: Model used by Claude Code subagents (CLAUDE_CODE_SUBAGENT_MODEL).

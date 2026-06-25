@@ -60,6 +60,7 @@ proxy in front of local models).
 | `anthropic_default_haiku_model` | `ANTHROPIC_DEFAULT_HAIKU_MODEL` | Haiku-tier override. |
 | `anthropic_default_sonnet_model` | `ANTHROPIC_DEFAULT_SONNET_MODEL` | Sonnet-tier override. |
 | `anthropic_default_opus_model` | `ANTHROPIC_DEFAULT_OPUS_MODEL` | Opus-tier override. |
+| `enforce_env_model` | – | Default **on**. Continuously nulls any per-agent hardcoded model so every Claude agent inherits `anthropic_model`. See *Hired-agent model override* below. Turn off only if you set models per agent on purpose. |
 | `openai_api_key` | `OPENAI_API_KEY` | OpenAI key (for the Codex CLI), if used. |
 
 ### Claude Code flags (advanced)
@@ -121,19 +122,38 @@ anthropic_default_sonnet_model: "qwen3-coder-gx10-vllm"
 anthropic_default_opus_model: "qwen3-coder-gx10-vllm"
 ```
 
-### ⚠️ Hired-agent model override
+### ⚠️ Hired-agent model override (auto-healed)
 
-When you hire an agent via the web UI, PaperclipAI may hardcode `adapter_config.model`
-to a real Anthropic model (e.g. `claude-sonnet-4-6`), which **bypasses your custom
-routing** and sends traffic straight to Anthropic. Fix it by PATCHing the agent's
-model to `null` so it inherits the add-on's env vars:
+When you hire or edit an agent in the web UI, the model dropdown's concrete default
+(e.g. `claude-sonnet-4-6`) gets persisted into that agent's `adapter_config.model`. For
+`claude_local` agents that value is passed to Claude Code as a literal `--model`, which
+**overrides your `anthropic_model`** — so the agent talks to Anthropic (or sends an
+unknown model id to your proxy and every run fails at init with a `400 Invalid model
+name`). Agents whose model is still empty keep working, which is why only *some* runs
+break.
+
+**The add-on fixes this for you.** With `enforce_env_model` on (the default), a
+background reconciler nulls any hardcoded `claude_local` model every ~60s, so newly hired
+agents inherit `anthropic_model` automatically. You normally don't need to do anything.
+
+**Manual one-off** (e.g. to fix it immediately without waiting): from the add-on
+**console**, null the model directly in the embedded Postgres. This is surgical — it
+preserves all other agent settings:
 
 ```bash
-curl -X PATCH http://localhost:3100/api/agents/<AGENT_ID> \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <AGENT_API_KEY>" \
-  -d '{"adapterConfig": {"model": null}}'
+node -e "
+const {Client}=require(require.resolve('pg',{paths:['/app/server','/app']}));
+const c=new Client({host:'localhost',port:54329,user:'paperclip',password:'paperclip',database:'paperclip'});
+c.connect().then(()=>c.query(\"UPDATE agents SET adapter_config=jsonb_set(adapter_config,'{model}','null'::jsonb) WHERE adapter_type IN ('claude_local','claude-local') AND adapter_config->>'model' IS NOT NULL\"))
+ .then(r=>{console.log('reset model on',r.rowCount,'agent(s)');return c.end();});
+"
 ```
+
+> ⚠️ **Do not** use the bare `PATCH /api/agents/<id>` with `{"adapterConfig":{"model":null}}`.
+> Upstream issue [#964](https://github.com/paperclipai/paperclip/issues/964) makes that
+> endpoint **replace** the whole `adapterConfig` rather than merge, wiping the agent's
+> `cwd`, instruction paths and permissions. If you must use the API, `GET` the agent first
+> and `PATCH` back its **full** `adapterConfig` with only `model` changed to `null`.
 
 ---
 
@@ -213,7 +233,7 @@ then rebuild from the store. Your `/data` is **never touched** during an update.
 | Server won't start, exits immediately | Ensure `better_auth_secret` is set (the log prints a `[FATAL]` line if empty). |
 | `auth login` crashes the process | The add-on installs a dummy `xdg-open`. Open the printed URL manually in your browser. |
 | *"Hostname '…' is not allowed"* | Add the host to `allowed_hostnames` (or run `pnpm paperclipai allowed-hostname <host>`) and **restart**. |
-| Agent ignores your custom model / hits Anthropic | Hired agent has a hardcoded model — PATCH it to `"model": null` (see above). |
+| Agent ignores your custom model / hits Anthropic (`400 Invalid model name`) | Hired agent has a hardcoded model. Auto-healed within ~60s when `enforce_env_model` is on (default); for an immediate fix run the DB one-liner under *Hired-agent model override*. |
 | Install/build is slow or OOMs | Expected — it builds ~1 GB from source. Give it time and enough RAM. |
 | Postgres errors about running as root | The add-on already runs the server as the `node` user via `gosu` and `chown`s `/data/paperclip`. If you see this, the persistent dir may have wrong ownership — restart re-applies it. |
 

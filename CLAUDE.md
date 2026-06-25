@@ -20,9 +20,11 @@ the single most important reference in this repo. **Read it before writing any c
 - Web UI port: `3100`
 - CLI: `pnpm paperclipai <command>` (inside the container)
 
-**Current status: documentation / init phase.** Only `README.md`, `CLAUDE.md`, and
-`context.md` exist. No add-on code (`config.yaml`, `Dockerfile`, `run.sh`, …) has
-been written yet — that is the next session's work (see §10).
+**Current status: beta — add-on scaffolded.** The add-on now exists under
+`paperclipai/` (`config.yaml`, `Dockerfile`, `run.sh`, `xdg-open`,
+`heal-agent-models.js`, `DOCS.md`, `translations/en.yaml`, icon/logo) plus a root
+`repository.yaml`. It builds PaperclipAI from upstream source at the pinned tag and is
+pending a live build-test on a HAOS host. The earlier "only docs exist" note is obsolete.
 
 ---
 
@@ -108,9 +110,16 @@ in the add-on (`Dockerfile` and/or `run.sh`):
   DB container is needed — Postgres 17 runs inside the same container.
 - **`HOME=/paperclip`.** All AI tool config/cache (Claude Code, Codex, Gemini,
   OpenCode) writes here, so it must live on the persistent volume.
-- **Hired-agent model override.** New agents may get `adapter_config.model` hardcoded
-  to a real Anthropic model, bypassing custom LLM routing. Document the fix: PATCH the
-  agent to set `"model": null`. (Not strictly add-on code — document in README/DOCS.)
+- **Hired-agent model override (auto-healed).** New agents may get
+  `adapter_config.model` hardcoded to a concrete Anthropic model (the UI dropdown's
+  default), bypassing custom LLM routing — for `claude_local` it becomes a literal
+  `--model` that overrides `ANTHROPIC_MODEL`, so runs fail at init with `400 Invalid
+  model name`. The add-on auto-heals this: `heal-agent-models.js` nulls the field in the
+  embedded Postgres on a 60s loop in `run.sh`, gated by the `enforce_env_model` option
+  (default on). **Do not** recommend the bare API `PATCH /api/agents/<id>` with
+  `{"adapterConfig":{"model":null}}` — upstream issue #964 makes it *replace* (not merge)
+  the whole `adapterConfig`, wiping `cwd`/instruction paths/permissions. The safe manual
+  path is the `jsonb_set` DB update (see DOCS.md / context.md).
 
 ---
 

@@ -117,14 +117,13 @@ anthropic_default_opus_model: "qwen3-coder-gx10-vllm"
 ```
 
 > ⚠️ When you hire an agent via the web UI, its model may be hardcoded (e.g.
-> `claude-sonnet-4-6`), which bypasses custom routing. Fix by setting the agent's
-> model to `null`:
-> ```bash
-> curl -X PATCH http://localhost:3100/api/agents/<AGENT_ID> \
->   -H "Content-Type: application/json" \
->   -H "Authorization: Bearer <AGENT_API_KEY>" \
->   -d '{"adapterConfig": {"model": null}}'
-> ```
+> `claude-sonnet-4-6`), which bypasses custom routing and fails with
+> `400 Invalid model name`. The add-on **auto-heals** this: with `enforce_env_model`
+> on (the default), a background reconciler nulls any hardcoded `claude_local` model
+> every ~60s so agents inherit `anthropic_model`. To fix one immediately, run the DB
+> one-liner in [DOCS.md](paperclipai/DOCS.md) → *Hired-agent model override*.
+> (Avoid the bare `PATCH /api/agents/<id>` form — upstream issue #964 makes it wipe the
+> rest of the agent's config.)
 
 ---
 
@@ -171,7 +170,7 @@ Your data in `/data` is **never touched** during an update.
 |---------|-----|
 | `auth login` crashes the process | The add-on installs a dummy `xdg-open`. Open the printed URL manually in your browser. |
 | *"Hostname '…' is not allowed"* | `pnpm paperclipai allowed-hostname <host>` then restart. |
-| Agent ignores your custom model / hits Anthropic | The hired agent has a hardcoded model — PATCH it to `"model": null` (see LLM routing). |
+| Agent ignores your custom model / hits Anthropic (`400 Invalid model name`) | Hired agent has a hardcoded model. Auto-healed within ~60s when `enforce_env_model` is on (default); for an immediate fix see the DB one-liner in [DOCS.md](paperclipai/DOCS.md). |
 | Server won't start | Ensure `better_auth_secret` is set. |
 | Install/build is slow | Expected — it builds ~1 GB from source. Give it time and enough RAM. |
 

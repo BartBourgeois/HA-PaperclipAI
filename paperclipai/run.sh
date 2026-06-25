@@ -9,7 +9,9 @@
 #   3. Map add-on options -> canonical env vars (only when non-empty).
 #   4. Re-assert the headless xdg-open shim.
 #   5. Background: seed the hostname allowlist + surface the first-run CEO invite.
-#   6. exec the PaperclipAI server as the unprivileged `node` user (embedded
+#   6. Background: loop the agent-model reconciler so hired agents can't bypass
+#      ANTHROPIC_MODEL with a hardcoded per-agent model (enforce_env_model).
+#   7. exec the PaperclipAI server as the unprivileged `node` user (embedded
 #      Postgres refuses to run as root).
 #
 # Plain bash — no s6/bashio needed for this single-service add-on.
@@ -135,6 +137,21 @@ cd /app
 ) &
 
 # ---------------------------------------------------------------------------
-# 6. Hand off to the PaperclipAI server as the unprivileged `node` user.
+# 6. Background: continuously heal per-agent model overrides.
+#    When an agent is hired/edited in the UI, its `adapter_config.model` may be
+#    stamped with a concrete Anthropic id (e.g. claude-sonnet-4-6), which the
+#    claude_local adapter passes to Claude Code as `--model`, OVERRIDING
+#    ANTHROPIC_MODEL and breaking custom LLM routing. heal-agent-models.js nulls
+#    that field in the embedded Postgres so agents inherit ANTHROPIC_MODEL again.
+#    Gated by `enforce_env_model` (default on) AND a non-empty ANTHROPIC_MODEL —
+#    never strip models when no env model is configured. The script is quiet and
+#    non-fatal, so the loop can't take the server down.
+# ---------------------------------------------------------------------------
+if [ "$(opt enforce_env_model)" != "false" ] && [ -n "${ANTHROPIC_MODEL}" ]; then
+  ( while true; do gosu node node /app/heal-agent-models.js || true; sleep 60; done ) &
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Hand off to the PaperclipAI server as the unprivileged `node` user.
 # ---------------------------------------------------------------------------
 exec gosu node node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js

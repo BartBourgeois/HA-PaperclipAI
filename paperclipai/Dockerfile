@@ -69,10 +69,12 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=3100 SERVE_UI=true \
     PAPERCLIP_DEPLOYMENT_EXPOSURE=private \
     OPENCODE_ALLOW_ALL_MODELS=true GEMINI_SANDBOX=false
 
-# HA glue: headless xdg-open shim + our entrypoint. Override upstream's
-# docker-entrypoint.sh / node CMD entirely.
+# HA glue: headless xdg-open shim + our entrypoint + the agent-model reconciler
+# (run.sh loops it to undo per-agent model overrides — see heal-agent-models.js).
+# Override upstream's docker-entrypoint.sh / node CMD entirely.
 COPY xdg-open /usr/local/bin/xdg-open
 COPY run.sh /run.sh
+COPY heal-agent-models.js /app/heal-agent-models.js
 RUN chmod a+x /usr/local/bin/xdg-open /run.sh
 EXPOSE 3100
 ENTRYPOINT []

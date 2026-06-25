@@ -216,14 +216,31 @@ On warp10 we route ALL AI traffic through a LiteLLM proxy running on the HA host
 | `ANTHROPIC_MODEL` | Model name as known to LiteLLM (e.g. `qwen3-coder-gx10-vllm`) |
 | `ANTHROPIC_DEFAULT_HAIKU/SONNET/OPUS_MODEL` | Override each model tier to the same local model |
 
-> **Lesson learned:** When a new agent is created via the hire flow, PaperclipAI may hardcode `"model": "claude-sonnet-4-6"` in the agent's `adapterConfig` in the database. This overrides the container-level env vars and sends traffic to Anthropic directly. **Fix:** PATCH the agent via the API to set `"model": null`.
+> **Lesson learned:** When a new agent is created/edited via the web UI hire flow, the
+> model dropdown's concrete default (e.g. `claude-sonnet-4-6`) gets persisted into the
+> agent's `adapter_config.model` in the database. For `claude_local` agents the adapter
+> passes it to Claude Code as a literal `--model`, overriding the container-level env
+> vars and sending traffic straight to Anthropic (or, against a proxy that doesn't know
+> that id, failing every run at init with `400 Invalid model name`). Agents whose model
+> is still null keep working, so only *some* runs break.
+>
+> **Fix — null the model surgically in the DB** (preserves all other `adapter_config`
+> fields). Do **not** use the API `PATCH /api/agents/<id>` with `{"adapterConfig":{"model":null}}`:
+> upstream issue [#964](https://github.com/paperclipai/paperclip/issues/964) makes that
+> endpoint *replace* the whole `adapterConfig` instead of merging, wiping `cwd`,
+> instruction paths and permissions.
 >
 > ```bash
-> curl -X PATCH http://localhost:3100/api/agents/<AGENT_ID> \
->   -H "Content-Type: application/json" \
->   -H "Authorization: Bearer <AGENT_API_KEY>" \
->   -d '{"adapterConfig": {"model": null}}'
+> docker exec docker-paperclip-1 node -e "
+> const {Client}=require(require.resolve('pg',{paths:['/app/server','/app']}));
+> const c=new Client({host:'localhost',port:54329,user:'paperclip',password:'paperclip',database:'paperclip'});
+> c.connect().then(()=>c.query(\"UPDATE agents SET adapter_config=jsonb_set(adapter_config,'{model}','null'::jsonb) WHERE adapter_type IN ('claude_local','claude-local') AND adapter_config->>'model' IS NOT NULL\"))
+>  .then(r=>{console.log('reset model on',r.rowCount,'agent(s)');return c.end();});
+> "
 > ```
+>
+> The HA add-on automates exactly this with a background reconciler
+> (`heal-agent-models.js`, gated by the `enforce_env_model` option).
 
 ---
 
