@@ -42,7 +42,7 @@ board to work from.
 | Option | Description |
 |--------|-------------|
 | `public_url` | Public URL of the UI, e.g. `http://homeassistant.local:3100`. Maps to `PAPERCLIP_PUBLIC_URL`. |
-| `allowed_hostnames` | List of hostnames/IPs allowed to reach the UI. `homeassistant.local`, `localhost` and the container's LAN IP are auto-seeded on every boot; add anything else here. |
+| `allowed_hostnames` | List of hostnames/IPs allowed to reach the UI. `homeassistant.local`, `localhost` and the host from `public_url` are auto-seeded on every boot; add anything else here. |
 
 ### LLM routing (Anthropic-compatible)
 
@@ -142,10 +142,12 @@ curl -X PATCH http://localhost:3100/api/agents/<AGENT_ID> \
 With `deploymentMode=authenticated`, every hostname/IP used to reach the UI must be
 allowlisted, or you get *"Hostname '…' is not allowed for this Paperclip instance."*
 
-The add-on **auto-seeds** `homeassistant.local`, `localhost`, the container LAN IP, and
-everything in your `allowed_hostnames` option on **every boot**. To add a brand-new
-custom host, add it to `allowed_hostnames` (or run the CLI) and **restart** the add-on —
-the running server caches the allowlist, so a restart is required:
+The add-on **auto-seeds** `homeassistant.local`, `localhost`, the host parsed from your
+`public_url`, and everything in your `allowed_hostnames` option on **every boot**. To
+reach the UI by a raw LAN IP, set `public_url` to that IP (e.g.
+`http://192.168.1.50:3100`) or add the IP to `allowed_hostnames`. To add a brand-new
+custom host, add it (or run the CLI) and **restart** the add-on — the running server
+caches the allowlist, so a restart is required:
 
 ```bash
 pnpm paperclipai allowed-hostname <hostname-or-ip>

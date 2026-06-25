@@ -102,23 +102,35 @@ cd /app
     sleep 2
   done
 
-  LANIP="$(hostname -i 2>/dev/null | awk '{print $1}')"
+  # Seed the hostname allowlist. `hostname -i` would only yield the container's
+  # internal bridge IP (useless for the allowlist), so derive the host users
+  # actually browse to from PAPERCLIP_PUBLIC_URL; `allowed_hostnames` covers any
+  # additional hosts/IPs. A newly added custom host needs one restart to take effect.
+  PUBHOST="$(python3 -c 'import os,urllib.parse;print(urllib.parse.urlparse(os.environ.get("PAPERCLIP_PUBLIC_URL","")).hostname or "")')"
   HOSTS="$(python3 -c "import json;print(' '.join(json.load(open('${CONFIG_PATH}')).get('allowed_hostnames',[])))")"
-  for h in ${HOSTS} localhost homeassistant.local "${LANIP}"; do
+  for h in ${HOSTS} localhost homeassistant.local "${PUBHOST}"; do
     [ -n "$h" ] && gosu node pnpm paperclipai allowed-hostname "$h" >/dev/null 2>&1 || true
   done
 
+  # First run: create the one-time CEO invite. Only write the marker if it actually
+  # succeeded, so a failed first run is retried on the next start instead of being
+  # permanently suppressed (which would leave the user with no admin invite).
   if [ ! -f "${PAPERCLIP_DATA}/.ha_bootstrapped" ]; then
     echo "=================== PAPERCLIPAI FIRST-RUN ==================="
     echo "Creating the one-time CEO (admin) invite. Open the URL printed"
     echo "below in your browser to create your admin account:"
     echo "------------------------------------------------------------"
-    gosu node pnpm paperclipai auth bootstrap-ceo || true
-    echo "------------------------------------------------------------"
-    echo "Missed it? From the add-on console run:"
-    echo "  pnpm paperclipai auth bootstrap-ceo --force"
-    echo "============================================================"
-    touch "${PAPERCLIP_DATA}/.ha_bootstrapped"
+    if gosu node pnpm paperclipai auth bootstrap-ceo; then
+      echo "------------------------------------------------------------"
+      echo "Missed it? From the add-on console run:"
+      echo "  pnpm paperclipai auth bootstrap-ceo --force"
+      echo "============================================================"
+      touch "${PAPERCLIP_DATA}/.ha_bootstrapped"
+    else
+      echo "[WARN] bootstrap-ceo failed; the CEO invite was not created." >&2
+      echo "[WARN] It will be retried automatically on the next add-on restart." >&2
+      echo "============================================================"
+    fi
   fi
 ) &
 

@@ -51,6 +51,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && mkdir -p /paperclip
 COPY --from=build /app /app
 
+# Materialise the pinned pnpm (from upstream package.json "packageManager") into a
+# shared corepack cache so the runtime `gosu node pnpm paperclipai …` calls in run.sh
+# resolve OFFLINE. Without this, the first runtime pnpm call — made as the `node` user
+# whose HOME is the fresh, empty /data volume — would try to download pnpm over the
+# network and silently fail on an offline host (taking the hostname seeding and
+# first-run CEO bootstrap down with it).
+ENV COREPACK_HOME=/opt/corepack COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN cd /app && pnpm --version && chown -R node:node /opt/corepack
+
 # Baked, static identity only — NEVER bake secrets. Runtime values (HOME,
 # PAPERCLIP_HOME, PAPERCLIP_CONFIG, BETTER_AUTH_SECRET, PAPERCLIP_PUBLIC_URL,
 # all ANTHROPIC_*/CLAUDE_CODE_*/OPENAI_API_KEY) are set by run.sh.

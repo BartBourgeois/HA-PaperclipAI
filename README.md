@@ -65,6 +65,7 @@ Set these in the add-on's **Configuration** tab. The most important is
 | `anthropic_auth_token` | – | Token for that endpoint (e.g. the LiteLLM master key). |
 | `anthropic_api_key` | – | Real Anthropic key. Leave empty when using a custom endpoint. |
 | `anthropic_model` | – | Model name as known to your endpoint. |
+| `anthropic_small_fast_model` | – | Small/fast model override (`ANTHROPIC_SMALL_FAST_MODEL`). |
 | `anthropic_default_haiku_model` / `_sonnet_model` / `_opus_model` | – | Per-tier model overrides. |
 | `openai_api_key` | – | OpenAI key (for Codex), if used. |
 | `claude_code_*` | – | Advanced Claude Code flags (effort, agent teams, caching, thinking). |
@@ -79,14 +80,12 @@ Set these in the add-on's **Configuration** tab. The most important is
 ## First-time setup
 
 1. **Start** the add-on and open its **Log** tab.
-2. Generate the one-time CEO invite (run from the add-on console / `docker exec`):
-   ```bash
-   pnpm paperclipai auth bootstrap-ceo
-   ```
-   This prints an invite URL.
-3. Open that URL in your browser and create your admin account.
-4. In the web UI, create your **company** and first **project**.
-5. Hire agents and assign them issues.
+2. On first run the add-on **automatically** creates a one-time CEO invite and prints
+   the **invite URL** in the Log. Open it in your browser and create your admin account.
+   _(Missed it or need a new one? From the add-on console run
+   `pnpm paperclipai auth bootstrap-ceo --force`.)_
+3. In the web UI, create your **company** and first **project**.
+4. Hire agents and assign them issues.
 
 If the UI shows *"Hostname '…' is not allowed"*, add it to the allowlist:
 ```bash

@@ -13,8 +13,8 @@ configuration:
     name: Allowed hostnames
     description: >-
       Hostnames/IPs allowed to reach the UI. homeassistant.local, localhost and the
-      container LAN IP are auto-seeded on boot; add any extra hosts here. Adding a new
-      host requires an add-on restart.
+      host from public_url are auto-seeded on boot; add any extra hosts here. Adding a
+      new host requires an add-on restart.
   anthropic_base_url:
     name: Anthropic base URL
     description: >-
